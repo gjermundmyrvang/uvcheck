@@ -7,6 +7,8 @@ import {
   View,
   Platform,
   ActivityIndicator,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 
 import * as Location from "expo-location";
@@ -17,6 +19,7 @@ export default function App() {
   const [location, setLocation] = useState(null);
   const [placeName, setPlaceName] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [peakUV, setPeakUV] = useState(null);
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -62,6 +65,7 @@ export default function App() {
 
   const fetchLatest = async (coord) => {
     const result = await fetchData(coord);
+    const peak = findPeak(result);
     const latest = result.properties.timeseries[0].data.instant.details;
 
     const details = {
@@ -79,15 +83,29 @@ export default function App() {
       wind_speed: latest.wind_speed ?? null,
     };
     console.log(details);
+    console.log("Peak:", peak);
+
     setData(details);
+    setPeakUV(peak);
   };
 
-  const getUVColor = (uv) => {
-    if (uv === null || uv === undefined) return "#ccc";
-    if (uv <= 2) return "#4CAF50";
-    if (uv <= 5) return "#FFC107";
-    if (uv <= 7) return "#FF9800";
-    return "#F44336";
+  const findPeak = (data) => {
+    const relevant = data.properties.timeseries;
+    console.log("Relevant: ", relevant);
+    const uvData = relevant.map(
+      (d) => +d.data.instant.details?.ultraviolet_index_clear_sky || 0
+    );
+    const peak = Math.max(...uvData);
+    return peak;
+  };
+
+  const refresh = async () => {
+    console.log("Refresh");
+    const coord = {
+      lat: location.latitude,
+      lon: location.longitude,
+    };
+    fetchLatest(coord);
   };
 
   return (
@@ -115,6 +133,11 @@ export default function App() {
         </View>
       )}
 
+      {peakUV && (
+        <View style={styles.uvBox}>
+          <Text style={styles.uvText}>Peak UV: {peakUV}</Text>
+        </View>
+      )}
       {data && (
         <View
           style={[
@@ -127,9 +150,23 @@ export default function App() {
           </Text>
         </View>
       )}
+      <TouchableOpacity
+        style={[styles.uvBox, { backgroundColor: "orange" }]}
+        onPress={refresh}
+      >
+        <Text style={styles.uvText}>Refresh</Text>
+      </TouchableOpacity>
     </View>
   );
 }
+
+const getUVColor = (uv) => {
+  if (uv === null || uv === undefined) return "#ccc";
+  if (uv <= 2) return "#4CAF50";
+  if (uv <= 5) return "#FFC107";
+  if (uv <= 7) return "#FF9800";
+  return "#F44336";
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -138,6 +175,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
+    flexDirection: "column",
   },
   title: {
     fontSize: 28,
@@ -175,6 +213,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: "90%",
     alignItems: "center",
+    backgroundColor: "#1E1E1E",
   },
   uvText: {
     fontSize: 18,
