@@ -1,14 +1,11 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  Platform,
-  ActivityIndicator,
-  ScrollView,
-  RefreshControl,
 } from "react-native";
 
 import * as Location from "expo-location";
@@ -20,6 +17,8 @@ export default function App() {
   const [placeName, setPlaceName] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [peakUV, setPeakUV] = useState(null);
+  const [nowTime, setnowTime] = useState(null);
+  const [peakTime, setpeakTime] = useState(null);
 
   useEffect(() => {
     async function getCurrentLocation() {
@@ -67,6 +66,8 @@ export default function App() {
     const result = await fetchData(coord);
     const peak = findPeak(result);
     const latest = result.properties.timeseries[0].data.instant.details;
+    const time = result.properties.timeseries[0].time;
+    const currentTime = new Date(time).toLocaleTimeString();
 
     const details = {
       air_pressure_at_sea_level: latest.air_pressure_at_sea_level ?? null,
@@ -84,18 +85,26 @@ export default function App() {
     };
     console.log(details);
     console.log("Peak:", peak);
+    console.log("Time:", currentTime);
+    console.log("Peaktime:", peak.time);
 
+    setnowTime(currentTime);
+    setpeakTime(peak.time);
     setData(details);
-    setPeakUV(peak);
+    setPeakUV(peak.uv);
   };
 
   const findPeak = (data) => {
     const relevant = data.properties.timeseries;
-    console.log("Relevant: ", relevant);
-    const uvData = relevant.map(
-      (d) => +d.data.instant.details?.ultraviolet_index_clear_sky || 0
+    const uvData = relevant.map((d) => ({
+      uv: +d.data.instant.details?.ultraviolet_index_clear_sky || 0,
+      time: new Date(d.time).toLocaleTimeString(),
+    }));
+
+    const peak = uvData.reduce((max, current) =>
+      current.uv > max.uv ? current : max
     );
-    const peak = Math.max(...uvData);
+
     return peak;
   };
 
@@ -136,6 +145,7 @@ export default function App() {
       {peakUV && (
         <View style={styles.uvBox}>
           <Text style={styles.uvText}>Peak UV: {peakUV}</Text>
+          <Text style={styles.uvText}>Time: {peakTime}</Text>
         </View>
       )}
       {data && (
@@ -148,6 +158,7 @@ export default function App() {
           <Text style={styles.uvText}>
             Latest UV: {data.ultraviolet_index_clear_sky}
           </Text>
+          <Text style={styles.uvText}>Time: {nowTime}</Text>
         </View>
       )}
       <TouchableOpacity
