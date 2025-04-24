@@ -2,7 +2,7 @@
   "expo": {
     "name": "uvcheck",
     "slug": "uvcheck",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -36,6 +36,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "fff16faa-8c2c-470c-a672-e0728e22e887"
+      }
     }
   }
 }
